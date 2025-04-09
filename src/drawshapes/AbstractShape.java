@@ -99,4 +99,5 @@ public abstract class AbstractShape implements IShape
         }
         throw new UnsupportedOperationException("Unexpected color: "+color);
     }
+
 }
