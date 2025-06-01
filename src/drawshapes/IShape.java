@@ -1,7 +1,5 @@
 package drawshapes;
 
-
-
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
@@ -84,4 +82,8 @@ public interface IShape
      * @return
      */
     public BoundingBox getBoundingBox();
+
+    public IShape clone();
+
+    public String toString();
 }

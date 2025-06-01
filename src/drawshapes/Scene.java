@@ -1,13 +1,16 @@
 package drawshapes;
 
-
-
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 
 /**
  * A scene of shapes.  Uses the Model-View-Controller (MVC) design pattern,
@@ -24,126 +27,121 @@ import java.util.List;
  */
 public class Scene implements Iterable<IShape>
 {
-    private List<IShape> shapeList=new LinkedList<IShape>();
-    private SelectionRectangle selectRect;
-    private boolean isDrag;
-    private Point startDrag;
+    private List<IShape> shapes;
+    private Stack<List<IShape>> undoStack;
     
-    public void updateSelectRect(Point drag) {
-        for (IShape s : this){
-            s.setSelected(false);
+    public Scene() {
+        shapes = new ArrayList<>();
+        undoStack = new Stack<>();
+        saveState();
+    }
+    
+    private void saveState() {
+        List<IShape> stateCopy = new ArrayList<>();
+        for (IShape shape : shapes) {
+            stateCopy.add(shape.clone());
         }
-        if (drag.x > startDrag.x){
-            if (drag.y > startDrag.y){
-                // top-left to bottom-right
-                selectRect = new SelectionRectangle(startDrag.x, drag.x, startDrag.y, drag.y);
-            } else {
-                // bottom-left to top-right
-                selectRect = new SelectionRectangle(startDrag.x, drag.x, drag.y, startDrag.y);
+        undoStack.push(stateCopy);
+    }
+    
+    public void undo() {
+        if (undoStack.size() > 1) {
+            shapes = undoStack.pop();
+        }
+    }
+    
+    public void saveToFile(String filename) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
+            for (IShape shape : shapes) {
+                writer.write(shape.toString());
+                writer.newLine();
             }
-        } else {
-            if (drag.y > startDrag.y){
-                // top-right to bottom-left
-                selectRect = new SelectionRectangle(drag.x, startDrag.x, startDrag.y, drag.y);
-            } else {
-                // bottom-left to top-right
-                selectRect = new SelectionRectangle(drag.x, startDrag.x, drag.y, startDrag.y);
+        }
+    }
+    
+    public void loadFromFile(String filename) throws IOException {
+        shapes.clear();
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                IShape shape = parseShape(line);
+                if (shape != null) {
+                    shapes.add(shape);
+                }
             }
         }
-        List<IShape> selectedShapes = this.select(selectRect);
-        for (IShape s : selectedShapes){
-            s.setSelected(true);
+        saveState();
+    }
+    
+    private IShape parseShape(String line) {
+        String[] parts = line.split(",");
+        if (parts.length < 4) return null;
+
+        String type = parts[0];
+        int x = Integer.parseInt(parts[1]);
+        int y = Integer.parseInt(parts[2]);
+        Color color = new Color(Integer.parseInt(parts[3]));
+
+        switch (type) {
+            case "SQUARE":
+                return new Square(color, x, y, Integer.parseInt(parts[4]));
+            case "CIRCLE":
+                return new Circle(color, new Point(x, y), Integer.parseInt(parts[4]));
+            case "RECTANGLE":
+                return new Rectangle(new Point(x, y), Integer.parseInt(parts[4]), Integer.parseInt(parts[5]), color);
+            default:
+                return null;
         }
     }
     
-    public void stopDrag() {
-        this.isDrag = false;
-    }
-    
-    public void startDrag(Point p){
-        this.isDrag = true;
-        this.startDrag = p;
-    }
-    
-    /**
-     * Draw all the shapes in the scene using the given Graphics object.
-     * @param g
-     */
     public void draw(Graphics g) {
-        for (IShape s : shapeList) {
-            if (s!=null){
+        for (IShape s : shapes) {
+            if (s != null) {
                 s.draw(g);
             }
         }
-        if (isDrag) {
-            selectRect.draw(g);
-        }
     }
     
-    /**
-     * Get an iterator that can iterate through all the shapes
-     * in the scene.
-     */
-    public Iterator<IShape> iterator() {
-        return shapeList.iterator();
+    public java.util.Iterator<IShape> iterator() {
+        return shapes.iterator();
     }
     
-    /**
-     * Return a list of shapes that contain the given point.
-     * @param point The point
-     * @return A list of shapes that contain the given point.
-     */
-    public List<IShape> select(Point point)
-    {
-        List<IShape> selected = new LinkedList<IShape>();
-        for (IShape s : shapeList){
-            if (s.contains(point)){
+    public List<IShape> select(Point point) {
+        List<IShape> selected = new ArrayList<>();
+        for (IShape s : shapes) {
+            if (s.contains(point)) {
                 selected.add(s);
             }
         }
         return selected;
     }
     
-    /**
-     * Return a list of shapes in the scene that intersect the given shape.
-     * @param s The shape
-     * @return A list of shapes intersecting the given shape.
-     */
-    public List<IShape> select(IShape shape)
-    {
-        List<IShape> selected = new LinkedList<IShape>();
-        for (IShape s : shapeList){
-            if (s.intersects(shape)){
-                selected.add(s);
-            }
-        }
-        return selected;
-    }
-    
-    /**
-     * Add a shape to the scene.  It will be rendered next time
-     * the draw() method is invoked.
-     * @param s
-     */
     public void addShape(IShape s) {
-        shapeList.add(s);
+        shapes.add(s);
+        saveState();
     }
     
-    /**
-     * Remove a list of shapes from the given scene.
-     * @param shapesToRemove
-     */
-    public void removeShapes(Collection<IShape> shapesToRemove) {
-        shapeList.removeAll(shapesToRemove);
+    public void removeSelectedShapes() {
+        shapes.removeIf(IShape::isSelected);
+        saveState();
+    }
+    
+    public List<IShape> getSelectedShapes() {
+        List<IShape> selected = new ArrayList<>();
+        for (IShape shape : shapes) {
+            if (shape.isSelected()) {
+                selected.add(shape);
+            }
+        }
+        return selected;
     }
     
     @Override   
     public String toString() {
-        String shapeText = "";
-        for (IShape s : shapeList) {
-            shapeText += s.toString() + "\n";
+        StringBuilder shapeText = new StringBuilder();
+        for (IShape s : shapes) {
+            shapeText.append(s.toString()).append("\n");
         }
-        return shapeText;
+        return shapeText.toString();
     }
-    
 }

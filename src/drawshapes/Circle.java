@@ -6,35 +6,67 @@ import java.awt.Point;
 
 public class Circle extends AbstractShape
 {
-    private int diameter;
+    private int radius;
     
-    public Circle(Color color, Point center, int diameter) {
-        super(new Point(center.x, center.y));
-        setBoundingBox(center.x - diameter/2, center.x + diameter/2, center.y - diameter/2, center.y + diameter/2);
-        this.color = color;
-        this.diameter = diameter;
+    public Circle(Color color, Point center, int radius) {
+        super(color, center);
+        this.radius = radius;
     }
 
     @Override
-    public void draw(Graphics g) {
-        if (isSelected()){
-            g.setColor(this.color.darker());
-        } else {
-            g.setColor(getColor());
+    protected void drawShape(Graphics g) {
+        g.setColor(color);
+        g.drawOval(anchorPoint.x - radius, anchorPoint.y - radius, radius * 2, radius * 2);
+        if (selected) {
+            g.drawRect(anchorPoint.x - radius - 2, anchorPoint.y - radius - 2, radius * 2 + 4, radius * 2 + 4);
         }
-        g.fillOval((int)getAnchorPoint().getX() - diameter/2,
-                (int)getAnchorPoint().getY() - diameter/2,
-                diameter,
-                diameter);
     }
-    
+
+    @Override
+    public boolean contains(Point p) {
+        int dx = p.x - anchorPoint.x;
+        int dy = p.y - anchorPoint.y;
+        return dx * dx + dy * dy <= radius * radius;
+    }
+
+    @Override
+    public boolean intersects(IShape other) {
+        if (other instanceof Circle) {
+            Circle c = (Circle) other;
+            int dx = c.anchorPoint.x - anchorPoint.x;
+            int dy = c.anchorPoint.y - anchorPoint.y;
+            int distance = (int) Math.sqrt(dx * dx + dy * dy);
+            return distance <= radius + c.radius;
+        }
+        return false;
+    }
+
+    @Override
+    public BoundingBox getBoundingBox() {
+        return new BoundingBox(
+            anchorPoint.x - radius,
+            anchorPoint.y - radius,
+            anchorPoint.x + radius,
+            anchorPoint.y + radius
+        );
+    }
+
+    @Override
+    public void scale(double factor) {
+        radius = (int) (radius * factor);
+    }
+
+    @Override
+    public IShape clone() {
+        Circle clone = new Circle(color, new Point(anchorPoint), radius);
+        clone.setSelected(selected);
+        clone.rotation = rotation;
+        return clone;
+    }
+
+    @Override
     public String toString() {
-        return String.format("CIRCLE %d %d %d %s %s", 
-                this.getAnchorPoint().x, 
-                this.getAnchorPoint().y,
-                this.diameter,
-                colorToString(this.getColor()),
-                this.isSelected());
+        return String.format("CIRCLE,%d,%d,%d,%d", anchorPoint.x, anchorPoint.y, color.getRGB(), radius);
     }
 
     @Override
@@ -42,5 +74,4 @@ public class Circle extends AbstractShape
         // TODO: move bounding box
         this.anchorPoint = p;
     }
-
 }

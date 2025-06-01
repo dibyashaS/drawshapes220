@@ -6,56 +6,63 @@ import java.awt.Point;
 
 public class Rectangle extends AbstractShape
 {
-    protected int width;
-    protected int height;
+    private int width;
+    private int height;
     
-    public Rectangle(Point clicked, int width, int height, Color color){
-        super(new Point(clicked.x - width/2, clicked.y - height/2));
-        setBoundingBox(clicked.x - width/2, clicked.x + width/2, clicked.y - height/2, clicked.y + height/2);
-        this.color = color;
+    public Rectangle(Point center, int width, int height, Color color) {
+        super(color, center);
         this.width = width;
         this.height = height;
     }
-    
-    public Rectangle(int left, int right, int top, int bottom) {
-        super(new Point(left, top));
-        setBoundingBox(left, right, top, bottom);
-        this.color = Color.BLUE;
-        this.width = right - left;
-        this.height = bottom - top;
-    }
 
-    /* (non-Javadoc)
-     * @see drawshapes.sol.Shape#draw(java.awt.Graphics)
-     */
     @Override
-    public void draw(Graphics g) {
-        if (isSelected()){
-            g.setColor(color.darker());
-        } else {
-            g.setColor(getColor());
+    protected void drawShape(Graphics g) {
+        g.setColor(color);
+        g.drawRect(anchorPoint.x - width/2, anchorPoint.y - height/2, width, height);
+        if (selected) {
+            g.drawRect(anchorPoint.x - width/2 - 2, anchorPoint.y - height/2 - 2, width + 4, height + 4);
         }
-        g.fillRect(getAnchorPoint().x, getAnchorPoint().y, width, height);
     }
 
-    public String toString() {
-        return String.format("RECTANGLE %d %d %d %d %s %s", 
-                getAnchorPoint().x,
-                getAnchorPoint().y,
-                width,
-                height,
-                colorToString(getColor()),
-                selected);
-    }
-    
-
-    /* (non-Javadoc)
-     * @see drawshapes.sol.Shape#setAnchorPoint(java.awt.Point)
-     */
     @Override
-    public void setAnchorPoint(Point p) {
-        // TODO: move bounding box
-        this.anchorPoint = p;
+    public boolean contains(Point p) {
+        return p.x >= anchorPoint.x - width/2 && p.x <= anchorPoint.x + width/2 &&
+               p.y >= anchorPoint.y - height/2 && p.y <= anchorPoint.y + height/2;
     }
 
+    @Override
+    public boolean intersects(IShape other) {
+        BoundingBox thisBox = getBoundingBox();
+        BoundingBox otherBox = other.getBoundingBox();
+        return thisBox.intersects(otherBox);
+    }
+
+    @Override
+    public BoundingBox getBoundingBox() {
+        return new BoundingBox(
+            anchorPoint.x - width/2,
+            anchorPoint.y - height/2,
+            anchorPoint.x + width/2,
+            anchorPoint.y + height/2
+        );
+    }
+
+    @Override
+    public void scale(double factor) {
+        width = (int) (width * factor);
+        height = (int) (height * factor);
+    }
+
+    @Override
+    public IShape clone() {
+        Rectangle clone = new Rectangle(new Point(anchorPoint), width, height, color);
+        clone.setSelected(selected);
+        clone.rotation = rotation;
+        return clone;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("RECTANGLE,%d,%d,%d,%d,%d", anchorPoint.x, anchorPoint.y, color.getRGB(), width, height);
+    }
 }

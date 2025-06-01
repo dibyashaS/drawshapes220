@@ -1,6 +1,7 @@
 package drawshapes;
 
 import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.Point;
 
 /**
@@ -12,15 +13,17 @@ import java.awt.Point;
  * 
  * 
  */
-public abstract class AbstractShape implements IShape
+public abstract class AbstractShape implements IMoveableShape
 {
     protected BoundingBox boundingBox;
     protected boolean selected;
     protected Color color;
     protected Point anchorPoint;
     
-    protected AbstractShape(Point anchor) {
-        this.anchorPoint = anchor;
+    protected AbstractShape(Color color, Point anchorPoint) {
+        this.color = color;
+        this.anchorPoint = anchorPoint;
+        this.selected = false;
     }
     
     protected void setBoundingBox(int left, int right, int top, int bottom) {
@@ -32,7 +35,7 @@ public abstract class AbstractShape implements IShape
      */
     @Override
     public boolean intersects(IShape other) {
-        if (this == other || other == null){
+        if (this == other || other == null) {
             return false;
         }
         return this.boundingBox.intersects(other.getBoundingBox());
@@ -91,13 +94,45 @@ public abstract class AbstractShape implements IShape
         return this.anchorPoint;
     }
     
-    static String colorToString(Color color) {
-        if (color == Color.RED) {
-            return "RED";
-        } else if (color == Color.BLUE) {
-            return "BLUE";
+    @Override
+    public void draw(Graphics g) {
+        g.setColor(color);
+        drawShape(g);
+        if (selected) {
+            g.setColor(Color.BLACK);
+            g.drawRect(boundingBox.getLeft() - 2, boundingBox.getTop() - 2, 
+                      boundingBox.getWidth() + 4, boundingBox.getHeight() + 4);
         }
-        throw new UnsupportedOperationException("Unexpected color: "+color);
     }
 
+    protected abstract void drawShape(Graphics g);
+
+    @Override
+    public void setAnchorPoint(Point point) {
+        this.anchorPoint = point;
+    }
+
+    @Override
+    public void move(int dx, int dy) {
+        anchorPoint.x += dx;
+        anchorPoint.y += dy;
+    }
+
+    @Override
+    public void scale(double factor) {
+        // Implement scaling in subclasses
+    }
+
+    @Override
+    public void rotate(double angle) {
+        // Rotation removed for simplicity
+    }
+
+    @Override
+    public double getRotation() {
+        return 0; // No rotation
+    }
+
+    @Override
+    public abstract IShape clone();
 }

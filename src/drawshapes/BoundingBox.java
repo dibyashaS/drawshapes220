@@ -51,4 +51,37 @@ class BoundingBox
         return this.left > other.left && this.right < other.right &&
                 this.top < other.top && this.bottom > other.bottom;
     }
+
+    public int getLeft() {
+        return left;
+    }
+
+    public int getRight() {
+        return right;
+    }
+
+    public int getTop() {
+        return top;
+    }
+
+    public int getBottom() {
+        return bottom;
+    }
+
+    public int getWidth() {
+        return right - left;
+    }
+
+    public int getHeight() {
+        return bottom - top;
+    }
+
+    public BoundingBox union(BoundingBox other) {
+        return new BoundingBox(
+            Math.min(this.left, other.left),
+            Math.min(this.top, other.top),
+            Math.max(this.right, other.right),
+            Math.max(this.bottom, other.bottom)
+        );
+    }
 }
