@@ -136,6 +136,40 @@ public class Scene implements Iterable<IShape>
         return selected;
     }
     
+    public List<IShape> getShapes() {
+        return new ArrayList<>(shapes);
+    }
+    
+    public void removeShape(IShape shape) {
+        shapes.remove(shape);
+        saveState();
+    }
+    
+    public void groupSelectedShapes() {
+        List<IShape> selected = getSelectedShapes();
+        if (selected.size() > 1) {
+            ShapeGroup group = new ShapeGroup();
+            for (IShape shape : selected) {
+                group.addShape(shape);
+                shapes.remove(shape);
+            }
+            shapes.add(group);
+            saveState();
+        }
+    }
+
+    public void ungroupSelectedShapes() {
+        List<IShape> selected = getSelectedShapes();
+        for (IShape shape : selected) {
+            if (shape instanceof ShapeGroup) {
+                ShapeGroup group = (ShapeGroup) shape;
+                shapes.remove(group);
+                shapes.addAll(group.getShapes());
+            }
+        }
+        saveState();
+    }
+    
     @Override   
     public String toString() {
         StringBuilder shapeText = new StringBuilder();
@@ -143,5 +177,22 @@ public class Scene implements Iterable<IShape>
             shapeText.append(s.toString()).append("\n");
         }
         return shapeText.toString();
+    }
+
+    public void bringToFront(List<IShape> selectedShapes) {
+        saveState();
+        for (IShape shape : selectedShapes) {
+            shapes.remove(shape);
+            shapes.add(shape);
+        }
+    }
+
+    public void sendToBack(List<IShape> selectedShapes) {
+        saveState();
+        for (int i = selectedShapes.size() - 1; i >= 0; i--) {
+            IShape shape = selectedShapes.get(i);
+            shapes.remove(shape);
+            shapes.add(0, shape);
+        }
     }
 }

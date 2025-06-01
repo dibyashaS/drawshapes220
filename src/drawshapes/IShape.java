@@ -86,4 +86,14 @@ public interface IShape
     public IShape clone();
 
     public String toString();
+
+    void move(int dx, int dy);
+    void scale(double factor);
+    void rotate(double angle);
+    double getRotation();
+    double getOpacity();
+    void setOpacity(double opacity);
+
+    void setBorderStyle(BorderStyle style);
+    BorderStyle getBorderStyle();
 }

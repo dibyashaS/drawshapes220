@@ -58,20 +58,124 @@ public class DrawShapes extends JFrame {
     
     private void initializeMouseListener() {
         MouseAdapter a = new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                if (e.getButton() == MouseEvent.BUTTON1) { 
+            private Point startPoint;
+            private IShape currentShape;
+            private boolean isResizing = false;
+            private int resizeCorner = -1;
+
+            public void mousePressed(MouseEvent e) {
+                startPoint = e.getPoint();
+                boolean shapeSelected = false;
+                
+                // First, deselect all shapes unless Ctrl is pressed
+                if (!e.isControlDown()) {
+                    for (IShape shape : scene.getShapes()) {
+                        shape.setSelected(false);
+                    }
+                }
+                
+                // Check shapes in reverse order (top to bottom)
+                List<IShape> shapes = scene.getShapes();
+                for (int i = shapes.size() - 1; i >= 0; i--) {
+                    IShape shape = shapes.get(i);
+                    
+                    // First check if we're clicking on a corner for resizing
+                    BoundingBox bbox = shape.getBoundingBox();
+                    Point[] corners = bbox.getCorners();
+                    for (int j = 0; j < corners.length; j++) {
+                        if (distance(startPoint, corners[j]) < 10) {
+                            isResizing = true;
+                            resizeCorner = j;
+                            currentShape = shape;
+                            shape.setSelected(true);
+                            shapeSelected = true;
+                            break;
+                        }
+                    }
+                    if (shapeSelected) break;
+                    
+                    // If not resizing, check if we're clicking on the shape itself
+                    if (shape.contains(startPoint)) {
+                        currentShape = shape;
+                        shape.setSelected(true);
+                        shapeSelected = true;
+                        break;
+                    }
+                }
+                
+                // If we didn't click on any existing shape, create a new one
+                if (!shapeSelected) {
                     if (shapeType == ShapeType.SQUARE) {
-                        scene.addShape(new Square(color, e.getX(), e.getY(), 100));
+                        currentShape = new Square(color, e.getX(), e.getY(), 100);
                     } else if (shapeType == ShapeType.CIRCLE) {
-                        scene.addShape(new Circle(color, e.getPoint(), 100));
+                        currentShape = new Circle(color, e.getPoint(), 50);
                     } else if (shapeType == ShapeType.RECTANGLE) {
-                        scene.addShape(new Rectangle(e.getPoint(), 100, 200, color));
+                        currentShape = new Rectangle(e.getPoint(), 150, 100, color);
+                    }
+                    currentShape.setSelected(true);
+                    scene.addShape(currentShape);
+                }
+                
+                // Request focus after any mouse interaction
+                shapePanel.requestFocusInWindow();
+                repaint();
+            }
+
+            public void mouseDragged(MouseEvent e) {
+                if (currentShape != null) {
+                    if (isResizing) {
+                        // Handle resizing
+                        BoundingBox bbox = currentShape.getBoundingBox();
+                        Point[] corners = bbox.getCorners();
+                        Point newCorner = e.getPoint();
+                        
+                        // Update shape size based on the dragged corner
+                        if (currentShape instanceof Rectangle) {
+                            Rectangle rect = (Rectangle) currentShape;
+                            int width = Math.abs(newCorner.x - corners[(resizeCorner + 2) % 4].x);
+                            int height = Math.abs(newCorner.y - corners[(resizeCorner + 2) % 4].y);
+                            rect.setSize(width, height);
+                        } else if (currentShape instanceof Square) {
+                            Square square = (Square) currentShape;
+                            int size = Math.max(
+                                Math.abs(newCorner.x - corners[(resizeCorner + 2) % 4].x),
+                                Math.abs(newCorner.y - corners[(resizeCorner + 2) % 4].y)
+                            );
+                            square.setSize(size);
+                        } else if (currentShape instanceof Circle) {
+                            Circle circle = (Circle) currentShape;
+                            int radius = (int) Math.sqrt(
+                                Math.pow(newCorner.x - circle.getCenter().x, 2) +
+                                Math.pow(newCorner.y - circle.getCenter().y, 2)
+                            );
+                            circle.setRadius(radius);
+                        }
+                    } else if (currentShape.isSelected()) {
+                        // Move the selected shape
+                        int dx = e.getX() - startPoint.x;
+                        int dy = e.getY() - startPoint.y;
+                        currentShape.move(dx, dy);
+                        startPoint = e.getPoint();
                     }
                     repaint();
                 }
             }
+
+            public void mouseReleased(MouseEvent e) {
+                if (currentShape != null) {
+                    currentShape = null;
+                    isResizing = false;
+                    resizeCorner = -1;
+                    repaint();
+                }
+            }
+
+            private double distance(Point p1, Point p2) {
+                return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+            }
         };
         shapePanel.addMouseListener(a);
+        shapePanel.addMouseMotionListener(a);
     }
     
     private void initializeMenu() {
@@ -136,29 +240,34 @@ public class DrawShapes extends JFrame {
         JMenu colorMenu = new JMenu("Color");
         menuBar.add(colorMenu);
 
-        JMenuItem redColorItem = new JMenuItem("Red");
-        colorMenu.add(redColorItem);
-        redColorItem.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                color = Color.RED;
-            }
-        });
+        // Add more colors
+        Color[] colors = {
+            Color.RED, Color.BLUE, Color.GREEN, 
+            Color.YELLOW, Color.MAGENTA, Color.CYAN,
+            Color.ORANGE, Color.PINK, Color.BLACK
+        };
         
-        JMenuItem blueColorItem = new JMenuItem("Blue");
-        colorMenu.add(blueColorItem);
-        blueColorItem.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                color = Color.BLUE;
-            }
-        });
-
-        JMenuItem greenColorItem = new JMenuItem("Green");
-        colorMenu.add(greenColorItem);
-        greenColorItem.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                color = Color.GREEN;
-            }
-        });
+        String[] colorNames = {
+            "Red", "Blue", "Green", 
+            "Yellow", "Magenta", "Cyan",
+            "Orange", "Pink", "Black"
+        };
+        
+        for (int i = 0; i < colors.length; i++) {
+            final Color c = colors[i];
+            JMenuItem colorItem = new JMenuItem(colorNames[i]);
+            colorMenu.add(colorItem);
+            colorItem.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    color = c;
+                    // Update color of selected shapes
+                    for (IShape shape : scene.getSelectedShapes()) {
+                        shape.setColor(c);
+                    }
+                    repaint();
+                }
+            });
+        }
         
         // Shape menu
         JMenu shapeMenu = new JMenu("Shape");
@@ -191,6 +300,70 @@ public class DrawShapes extends JFrame {
             }
         });
 
+        // New: Layer menu
+        JMenu layerMenu = new JMenu("Layer");
+        menuBar.add(layerMenu);
+
+        JMenuItem bringToFrontItem = new JMenuItem("Bring to Front");
+        layerMenu.add(bringToFrontItem);
+        bringToFrontItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                scene.bringToFront(scene.getSelectedShapes());
+                repaint();
+            }
+        });
+
+        JMenuItem sendToBackItem = new JMenuItem("Send to Back");
+        layerMenu.add(sendToBackItem);
+        sendToBackItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                scene.sendToBack(scene.getSelectedShapes());
+                repaint();
+            }
+        });
+
+        // New: Border menu
+        JMenu borderMenu = new JMenu("Border");
+        menuBar.add(borderMenu);
+
+        JMenuItem solidBorderItem = new JMenuItem("Solid");
+        borderMenu.add(solidBorderItem);
+        solidBorderItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                for (IShape shape : scene.getSelectedShapes()) {
+                    shape.setBorderStyle(BorderStyle.SOLID);
+                }
+                repaint();
+            }
+        });
+
+        JMenuItem dashedBorderItem = new JMenuItem("Dashed");
+        borderMenu.add(dashedBorderItem);
+        dashedBorderItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                for (IShape shape : scene.getSelectedShapes()) {
+                    shape.setBorderStyle(BorderStyle.DASHED);
+                }
+                repaint();
+            }
+        });
+
+        JMenuItem dottedBorderItem = new JMenuItem("Dotted");
+        borderMenu.add(dottedBorderItem);
+        dottedBorderItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                for (IShape shape : scene.getSelectedShapes()) {
+                    shape.setBorderStyle(BorderStyle.DOTTED);
+                }
+                repaint();
+            }
+        });
+
         this.setJMenuBar(menuBar);
     }
     
@@ -200,7 +373,7 @@ public class DrawShapes extends JFrame {
             public void keyPressed(KeyEvent e) {
                 List<IShape> selected = scene.getSelectedShapes();
                 if (!selected.isEmpty()) {
-                    int moveAmount = 5;
+                    int moveAmount = e.isShiftDown() ? 20 : 5; // Larger movement with Shift
                     switch (e.getKeyCode()) {
                         case KeyEvent.VK_LEFT:
                             for (IShape shape : selected) {
@@ -233,6 +406,37 @@ public class DrawShapes extends JFrame {
                         case KeyEvent.VK_DELETE:
                             scene.removeSelectedShapes();
                             break;
+                        case KeyEvent.VK_PLUS:
+                        case KeyEvent.VK_EQUALS:
+                            for (IShape shape : selected) {
+                                shape.scale(1.1);
+                            }
+                            break;
+                        case KeyEvent.VK_MINUS:
+                            for (IShape shape : selected) {
+                                shape.scale(0.9);
+                            }
+                            break;
+                        case KeyEvent.VK_G:
+                            if (e.isControlDown()) {
+                                scene.groupSelectedShapes();
+                            }
+                            break;
+                        case KeyEvent.VK_U:
+                            if (e.isControlDown()) {
+                                scene.ungroupSelectedShapes();
+                            }
+                            break;
+                        case KeyEvent.VK_OPEN_BRACKET:
+                            for (IShape shape : selected) {
+                                shape.setOpacity(Math.max(0, shape.getOpacity() - 0.1));
+                            }
+                            break;
+                        case KeyEvent.VK_CLOSE_BRACKET:
+                            for (IShape shape : selected) {
+                                shape.setOpacity(Math.min(1, shape.getOpacity() + 0.1));
+                            }
+                            break;
                     }
                     repaint();
                 }
@@ -246,6 +450,14 @@ public class DrawShapes extends JFrame {
         };
         shapePanel.addKeyListener(keyListener);
         shapePanel.setFocusable(true);
+        shapePanel.requestFocusInWindow();
+        
+        // Add focus listener to ensure panel keeps focus
+        shapePanel.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent e) {
+                shapePanel.requestFocusInWindow();
+            }
+        });
     }
     
     public static void main(String[] args) {

@@ -16,8 +16,9 @@ public class Circle extends AbstractShape
     @Override
     protected void drawShape(Graphics g) {
         g.setColor(color);
-        g.drawOval(anchorPoint.x - radius, anchorPoint.y - radius, radius * 2, radius * 2);
+        g.fillOval(anchorPoint.x - radius, anchorPoint.y - radius, radius * 2, radius * 2);
         if (selected) {
+            g.setColor(Color.BLACK);
             g.drawRect(anchorPoint.x - radius - 2, anchorPoint.y - radius - 2, radius * 2 + 4, radius * 2 + 4);
         }
     }
@@ -60,7 +61,6 @@ public class Circle extends AbstractShape
     public IShape clone() {
         Circle clone = new Circle(color, new Point(anchorPoint), radius);
         clone.setSelected(selected);
-        clone.rotation = rotation;
         return clone;
     }
 
@@ -73,5 +73,17 @@ public class Circle extends AbstractShape
     public void setAnchorPoint(Point p) {
         // TODO: move bounding box
         this.anchorPoint = p;
+    }
+
+    public Point getCenter() {
+        return new Point(anchorPoint);
+    }
+
+    public void setRadius(int radius) {
+        this.radius = radius;
+    }
+
+    public int getRadius() {
+        return radius;
     }
 }

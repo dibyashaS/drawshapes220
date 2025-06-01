@@ -15,8 +15,9 @@ public class Square extends AbstractShape {
     @Override
     protected void drawShape(Graphics g) {
         g.setColor(color);
-        g.drawRect(anchorPoint.x - size/2, anchorPoint.y - size/2, size, size);
+        g.fillRect(anchorPoint.x - size/2, anchorPoint.y - size/2, size, size);
         if (selected) {
+            g.setColor(Color.BLACK);
             g.drawRect(anchorPoint.x - size/2 - 2, anchorPoint.y - size/2 - 2, size + 4, size + 4);
         }
     }
@@ -53,8 +54,15 @@ public class Square extends AbstractShape {
     public IShape clone() {
         Square clone = new Square(color, anchorPoint.x, anchorPoint.y, size);
         clone.setSelected(selected);
-        clone.rotation = rotation;
         return clone;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public int getSize() {
+        return size;
     }
 
     @Override

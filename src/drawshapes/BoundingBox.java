@@ -76,12 +76,23 @@ class BoundingBox
         return bottom - top;
     }
 
+    public Point[] getCorners() {
+        return corners.clone();
+    }
+
     public BoundingBox union(BoundingBox other) {
         return new BoundingBox(
             Math.min(this.left, other.left),
             Math.min(this.top, other.top),
             Math.max(this.right, other.right),
             Math.max(this.bottom, other.bottom)
+        );
+    }
+
+    public Point getCenter() {
+        return new Point(
+            (left + right) / 2,
+            (top + bottom) / 2
         );
     }
 }

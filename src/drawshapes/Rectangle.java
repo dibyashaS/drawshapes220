@@ -18,8 +18,9 @@ public class Rectangle extends AbstractShape
     @Override
     protected void drawShape(Graphics g) {
         g.setColor(color);
-        g.drawRect(anchorPoint.x - width/2, anchorPoint.y - height/2, width, height);
+        g.fillRect(anchorPoint.x - width/2, anchorPoint.y - height/2, width, height);
         if (selected) {
+            g.setColor(Color.BLACK);
             g.drawRect(anchorPoint.x - width/2 - 2, anchorPoint.y - height/2 - 2, width + 4, height + 4);
         }
     }
@@ -57,12 +58,24 @@ public class Rectangle extends AbstractShape
     public IShape clone() {
         Rectangle clone = new Rectangle(new Point(anchorPoint), width, height, color);
         clone.setSelected(selected);
-        clone.rotation = rotation;
         return clone;
     }
 
     @Override
     public String toString() {
         return String.format("RECTANGLE,%d,%d,%d,%d,%d", anchorPoint.x, anchorPoint.y, color.getRGB(), width, height);
+    }
+
+    public void setSize(int width, int height) {
+        this.width = width;
+        this.height = height;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
     }
 }
